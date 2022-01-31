@@ -269,6 +269,8 @@ class Database {
 
   sqlite3* database_ = nullptr;
 
+  mutable bool database_cleared_ = false;
+
   // Ensure that only one database object at a time updates the schema of a
   // database. Since the schema is updated every time a database is opened, this
   // is to ensure that there are no race conditions ("database locked" error
