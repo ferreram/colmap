@@ -542,6 +542,28 @@ void OptionManager::AddMapperOptions() {
   AddAndRegisterDefaultOption("Mapper.fix_existing_images",
                               &mapper->fix_existing_images);
 
+  // Motion Priors
+  AddAndRegisterDefaultOption("Mapper.use_prior_motion",
+                              &mapper->ba_use_prior_motion);
+  AddAndRegisterDefaultOption("Mapper.prior_is_gps",
+                              &mapper->ba_prior_is_gps);
+  AddAndRegisterDefaultOption("Mapper.use_enu_coords",
+                              &mapper->ba_use_enu_coords);
+  AddAndRegisterDefaultOption("Mapper.ba_prior_std_x",
+                              &mapper->ba_prior_std_x);
+  AddAndRegisterDefaultOption("Mapper.ba_prior_std_y",
+                              &mapper->ba_prior_std_y);
+  AddAndRegisterDefaultOption("Mapper.ba_prior_std_z",
+                              &mapper->ba_prior_std_z);
+  AddAndRegisterDefaultOption("Mapper.ba_global_use_robust_loss_on_prior",
+                              &mapper->ba_global_use_robust_loss_on_prior);
+  AddAndRegisterDefaultOption("Mapper.prior_loss_scale",
+                              &mapper->prior_loss_scale);
+  AddAndRegisterDefaultOption("Mapper.ba_global_use_robust_cost",
+                              &mapper->ba_global_use_robust_cost);
+  AddAndRegisterDefaultOption("Mapper.ba_global_loss_scale",
+                              &mapper->ba_global_loss_scale);
+
   // IncrementalMapper.
   AddAndRegisterDefaultOption("Mapper.init_min_num_inliers",
                               &mapper->mapper.init_min_num_inliers);

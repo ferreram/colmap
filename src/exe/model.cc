@@ -1058,6 +1058,7 @@ int RunModelSfmGPSAlign(int argc, char** argv) {
   bool refine_principal_point = false;
   int ba_max_iterations = 100;
   int nb_ba_refinement = 5;
+  double ba_function_tolerance = 1e-6;
 
   const int min_common_images = 3;
 
@@ -1081,6 +1082,7 @@ int RunModelSfmGPSAlign(int argc, char** argv) {
   options.AddDefaultOption("refine_principal_point", &refine_principal_point);
   options.AddDefaultOption("ba_max_iterations", &ba_max_iterations);
   options.AddDefaultOption("nb_ba_refinement", &nb_ba_refinement);
+  options.AddDefaultOption("ba_function_tolerance", &ba_function_tolerance);
   options.Parse(argc, argv);
 
   // Check Parsed Arguments
@@ -1182,7 +1184,7 @@ int RunModelSfmGPSAlign(int argc, char** argv) {
   options.bundle_adjustment->solver_options.max_linear_solver_iterations =
       50;
   options.bundle_adjustment->solver_options.inner_iteration_tolerance = 1e-1;
-  options.bundle_adjustment->solver_options.function_tolerance = 1e-5;
+  options.bundle_adjustment->solver_options.function_tolerance = ba_function_tolerance;
 
   options.bundle_adjustment->solver_options.minimizer_progress_to_stdout =
       true;
