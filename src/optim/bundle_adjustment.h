@@ -84,7 +84,7 @@ struct BundleAdjustmentOptions {
   ceres::Solver::Options solver_options;
 
   BundleAdjustmentOptions() {
-    solver_options.function_tolerance = 1e-5;
+    solver_options.function_tolerance = 1e-6;
     solver_options.gradient_tolerance = 0.0;
     solver_options.parameter_tolerance = 0.0;
     solver_options.minimizer_progress_to_stdout = false;

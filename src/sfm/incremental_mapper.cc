@@ -291,12 +291,13 @@ bool IncrementalMapper::RegisterInitialImagePair(const Options& options,
   image2.Qvec() = prev_init_two_view_geometry_.qvec;
   image2.Tvec() = prev_init_two_view_geometry_.tvec;
 
-  if (options.use_prior_motion) {
-    // Roughly align initial images w.r.t. priors
-    double scale = (image2.TvecPrior() - image1.TvecPrior()).norm();
-    image1.Tvec() = -1. * image1.TvecPrior();
-    image2.Tvec() = scale * image2.Tvec() + image1.Tvec();
-  }
+  // Alignment to be done in the Global BA by initial Rigid Sim3 Estimation
+  // if (options.use_prior_motion) {
+  //   // Roughly align initial images w.r.t. priors
+  //   double scale = (image2.TvecPrior() - image1.TvecPrior()).norm();
+  //   image1.Tvec() = -1. * image1.TvecPrior();
+  //   image2.Tvec() = scale * image2.Tvec() + image1.Tvec();
+  // }
 
   const Eigen::Matrix3x4d proj_matrix1 = image1.ProjectionMatrix();
   const Eigen::Matrix3x4d proj_matrix2 = image2.ProjectionMatrix();
