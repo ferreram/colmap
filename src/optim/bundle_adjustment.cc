@@ -308,8 +308,6 @@ bool BundleAdjuster::Solve(Reconstruction* reconstruction) {
 
         position_centroid /= static_cast<double>(config_.Images().size());
 
-        std::cout << "\n Projection Centroid : " << position_centroid.transpose() << "\n";
-
         sim_to_center = SimilarityTransform3(1.0, ComposeIdentityQuaternion(), -position_centroid);
         reconstruction->Transform(sim_to_center);
 
@@ -320,22 +318,10 @@ bool BundleAdjuster::Solve(Reconstruction* reconstruction) {
 
         for (const auto image_id : config_.Images()) {
           auto& image = reconstruction->Image(image_id);
-          tvec_centroid += image.ProjectionCenter();
           if (image.HasTvecPrior()) {
-            prev_tvecprior_centroid += image.TvecPrior();
             sim_to_center.TransformPoint(&image.TvecPrior());
-            tvecprior_centroid += image.TvecPrior();
-            ++nbprior;
           }
         }
-
-        tvec_centroid /= static_cast<double>(config_.Images().size());
-        prev_tvecprior_centroid /= static_cast<double>(nbprior);
-        tvecprior_centroid /= static_cast<double>(nbprior);
-
-        std::cout << "\n New Projection Centroid : " << tvec_centroid.transpose() << "\n";
-        std::cout << "\n Prev Prior Centroid : " << prev_tvecprior_centroid.transpose() << "\n";
-        std::cout << "\n New Prior Centroid : " << tvecprior_centroid.transpose() << "\n";
 
 
         std::cout << "\nRigid Sim3 Alignment : \n";
