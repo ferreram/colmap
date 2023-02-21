@@ -264,7 +264,8 @@ class Reconstruction {
                                 const double min_tri_angle,
                                 const std::unordered_set<image_t>& image_ids);
   size_t FilterAllPoints3D(const double max_reproj_error,
-                           const double min_tri_angle);
+                           const double min_tri_angle,
+                           const double max_pt_2_cam_dist = 0.);
 
   // Filter observations that have negative depth.
   //
@@ -405,6 +406,9 @@ class Reconstruction {
       const std::unordered_set<point3D_t>& point3D_ids);
   size_t FilterPoints3DWithLargeReprojectionError(
       const double max_reproj_error,
+      const std::unordered_set<point3D_t>& point3D_ids);
+  size_t FilterPoints3DBasedOnDistanceToCameraObservation(
+      const double max_pt_2_cam_dist,
       const std::unordered_set<point3D_t>& point3D_ids);
 
   std::tuple<Eigen::Vector3d, Eigen::Vector3d, Eigen::Vector3d>

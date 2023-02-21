@@ -633,14 +633,20 @@ size_t Reconstruction::FilterPoints3DInImages(
 }
 
 size_t Reconstruction::FilterAllPoints3D(const double max_reproj_error,
-                                         const double min_tri_angle) {
+                                         const double min_tri_angle,
+                                         const double max_pt_2_cam_dist /* = 0.*/) {
   // Important: First filter observations and points with large reprojection
   // error, so that observations with large reprojection error do not make
   // a point stable through a large triangulation angle.
+  // Same goes for "FilterPoints3DBasedOnDistanceToCameraObservation"
   const std::unordered_set<point3D_t>& point3D_ids = Point3DIds();
   size_t num_filtered = 0;
   num_filtered +=
       FilterPoints3DWithLargeReprojectionError(max_reproj_error, point3D_ids);
+  if (max_pt_2_cam_dist > 0.) {
+    num_filtered += 
+        FilterPoints3DBasedOnDistanceToCameraObservation(max_pt_2_cam_dist, point3D_ids);
+  }
   num_filtered +=
       FilterPoints3DWithSmallTriangulationAngle(min_tri_angle, point3D_ids);
   return num_filtered;
@@ -1506,6 +1512,59 @@ size_t Reconstruction::FilterPoints3DWithLargeReprojectionError(
         track_els_to_delete.push_back(track_el);
       } else {
         reproj_error_sum += std::sqrt(squared_reproj_error);
+      }
+    }
+
+    if (track_els_to_delete.size() >= point3D.Track().Length() - 1) {
+      num_filtered += point3D.Track().Length();
+      DeletePoint3D(point3D_id);
+    } else {
+      num_filtered += track_els_to_delete.size();
+      for (const auto& track_el : track_els_to_delete) {
+        DeleteObservation(track_el.image_id, track_el.point2D_idx);
+      }
+      point3D.SetError(reproj_error_sum / point3D.Track().Length());
+    }
+  }
+
+  return num_filtered;
+}
+
+size_t Reconstruction::FilterPoints3DBasedOnDistanceToCameraObservation(
+    const double max_pt_2_cam_dist,
+    const std::unordered_set<point3D_t>& point3D_ids) {
+  const double max_squared_pt_2_cam_dist = max_pt_2_cam_dist * max_pt_2_cam_dist;
+
+  // Number of filtered points.
+  size_t num_filtered = 0;
+
+  for (const auto point3D_id : point3D_ids) {
+    if (!ExistsPoint3D(point3D_id)) {
+      continue;
+    }
+
+    class Point3D& point3D = Point3D(point3D_id);
+
+    if (point3D.Track().Length() < 2) {
+      DeletePoint3D(point3D_id);
+      num_filtered += point3D.Track().Length();
+      continue;
+    }
+
+    double reproj_error_sum = 0.0;
+
+    std::vector<TrackElement> track_els_to_delete;
+
+    for (const auto& track_el : point3D.Track().Elements()) {
+      const class Image& image = Image(track_el.image_id);
+      const class Camera& camera = Camera(image.CameraId());
+      const double dist_2_cam = (point3D.XYZ() - image.ProjectionCenter()).squaredNorm();
+      if (dist_2_cam > max_squared_pt_2_cam_dist) {
+        track_els_to_delete.push_back(track_el);
+      } else {
+        const Point2D& point2D = image.Point2D(track_el.point2D_idx);
+        reproj_error_sum += std::sqrt(CalculateSquaredReprojectionError(
+            point2D.XY(), point3D.XYZ(), image.Qvec(), image.Tvec(), camera));
       }
     }
 
