@@ -65,6 +65,10 @@ option(PROFILING_ENABLED "Whether to enable google-perftools linker flags" OFF)
 option(CCACHE_ENABLED "Whether to enable compiler caching, if available" ON)
 option(CGAL_ENABLED "Whether to enable the CGAL library" ON)
 option(BOOST_STATIC "Whether to enable static boost library linker flags" ON)
+set(CMAKE_CUDA_ARCHITECTURES "70" CACHE STRING "List of CUDA architectures for which to \
+generate code. Choose between: native, all, all-major, '70', '72', ...")
+
+# set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCHS})
 
 if(TESTS_ENABLED)
     enable_testing()
