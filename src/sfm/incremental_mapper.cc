@@ -704,25 +704,32 @@ bool IncrementalMapper::AdjustGlobalBundle(
     }
   }
 
-  if (!options.use_prior_motion) {
+  if (!options.use_prior_motion)
+  {
     // Fix 7-DOFs of the bundle adjustment problem.
     ba_config.SetConstantPose(reg_image_ids[0]);
     if (!options.fix_existing_images ||
         !existing_image_ids_.count(reg_image_ids[1])) {
       ba_config.SetConstantTvec(reg_image_ids[1], {0});
     }
-  }
 
-  // Run bundle adjustment.
-  BundleAdjuster bundle_adjuster(ba_options, ba_config);
-  if (!bundle_adjuster.Solve(reconstruction_)) {
-    return false;
-  }
+    // Run bundle adjustment.
+    BundleAdjuster bundle_adjuster(ba_options, ba_config);
+    if (!bundle_adjuster.Solve(reconstruction_)) {
+      return false;
+    }
 
-  if (!options.use_prior_motion) {
     // Normalize scene for numerical stability and
     // to avoid large scale changes in viewer.
     reconstruction_->Normalize();
+  }
+  else // GpsBA case
+  {
+    // Run GPS bundle adjustment.
+    GpsBundleAdjuster bundle_adjuster(ba_options, ba_config);
+    if (!bundle_adjuster.Solve(reconstruction_)) {
+      return false;
+    }
   }
 
   return true;
@@ -836,9 +843,9 @@ std::vector<image_t> IncrementalMapper::FindFirstInitialImage(
     }
 
     // If using motion prior, image must have a prior for init
-    if (options.use_prior_motion && !image.second.HasTvecPrior()) {
-      continue;
-    }
+    // if (options.use_prior_motion && !image.second.HasTvecPrior()) {
+    //   continue;
+    // }
 
     // Only use images for initialization a maximum number of times.
     if (init_num_reg_trials_.count(image.first) &&
@@ -925,9 +932,9 @@ std::vector<image_t> IncrementalMapper::FindSecondInitialImage(
     if (elem.second >= init_min_num_inliers) {
       const class Image& image = reconstruction_->Image(elem.first);
       // If using motion prior, image must have a prior for init
-      if (options.use_prior_motion && !image.HasTvecPrior()) {
-        continue;
-      }
+      // if (options.use_prior_motion && !image.HasTvecPrior()) {
+      //   continue;
+      // }
       const class Camera& camera = reconstruction_->Camera(image.CameraId());
       ImageInfo image_info;
       image_info.image_id = elem.first;

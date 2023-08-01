@@ -52,6 +52,8 @@ class BundleAdjustmentWidget : public OptionsWidget {
 
  private:
   void Run();
+  void RunBA();
+  void RunGpsBA();
   void Render();
 
   MainWindow* main_window_;

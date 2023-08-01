@@ -1181,8 +1181,7 @@ int RunModelSfmGPSAlign(int argc, char** argv) {
   options.bundle_adjustment->refine_principal_point = refine_principal_point;
 
   options.bundle_adjustment->solver_options.max_num_iterations = ba_max_iterations;
-  options.bundle_adjustment->solver_options.max_linear_solver_iterations =
-      50;
+  options.bundle_adjustment->solver_options.max_linear_solver_iterations = 50;
   options.bundle_adjustment->solver_options.inner_iteration_tolerance = 1e-1;
   options.bundle_adjustment->solver_options.function_tolerance = ba_function_tolerance;
 

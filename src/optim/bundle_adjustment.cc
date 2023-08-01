@@ -261,82 +261,82 @@ bool BundleAdjuster::Solve(Reconstruction* reconstruction) {
 
   problem_.reset(new ceres::Problem());
 
-  SimilarityTransform3 sim_to_center;
+  // SimilarityTransform3 sim_to_center;
 
-  if (options_.use_prior_motion) {
-    std::vector<double> vini_err;
-    std::vector<Eigen::Vector3d> src, dst;
-    vini_err.reserve(config_.NumImages());
-    src.reserve(config_.NumImages());
-    dst.reserve(config_.NumImages());
-    for (const auto image_id : config_.Images()) {
-      auto& image = reconstruction->Image(image_id);
-      if (image.HasTvecPrior()) {
-        src.push_back(image.ProjectionCenter());
-        dst.push_back(image.TvecPrior());
-        vini_err.push_back(
-            (image.ProjectionCenter() - image.TvecPrior()).norm());
-      }
-    }
+  // if (options_.use_prior_motion) {
+  //   std::vector<double> vini_err;
+  //   std::vector<Eigen::Vector3d> src, dst;
+  //   vini_err.reserve(config_.NumImages());
+  //   src.reserve(config_.NumImages());
+  //   dst.reserve(config_.NumImages());
+  //   for (const auto image_id : config_.Images()) {
+  //     auto& image = reconstruction->Image(image_id);
+  //     if (image.HasTvecPrior()) {
+  //       src.push_back(image.ProjectionCenter());
+  //       dst.push_back(image.TvecPrior());
+  //       vini_err.push_back(
+  //           (image.ProjectionCenter() - image.TvecPrior()).norm());
+  //     }
+  //   }
 
-    std::cout << "\n Initial Alignment tvec err (median / mean / std): "
-              << Median(vini_err) << " / " << Mean(vini_err) << " / "
-              << StdDev(vini_err) << "\n";
+  //   std::cout << "\n Initial Alignment tvec err (median / mean / std): "
+  //             << Median(vini_err) << " / " << Mean(vini_err) << " / "
+  //             << StdDev(vini_err) << "\n";
 
-    if (src.size() > 5) {
-      SimilarityTransform3 tform;
-      // bool success = reconstruction->Align(src, dst, &tform);
-      RANSACOptions ransac;
-      ransac.max_error = (options_.motion_prior_xyz_std * 3.).norm();
-      const int min_num_inliers = 3;
-      bool success = reconstruction->AlignRobust(src, dst, min_num_inliers,
-                                                 ransac, &tform);
-      if (success) {
-        std::vector<double> verr;
-        verr.reserve(config_.NumImages());
-        Eigen::Vector3d position_centroid = Eigen::Vector3d::Zero();
-        for (const auto image_id : config_.Images()) {
-          const auto& image = reconstruction->Image(image_id);
+  //   if (src.size() > 5) {
+  //     SimilarityTransform3 tform;
+  //     // bool success = reconstruction->Align(src, dst, &tform);
+  //     RANSACOptions ransac;
+  //     ransac.max_error = (options_.motion_prior_xyz_std * 3.).norm();
+  //     const int min_num_inliers = 3;
+  //     bool success = reconstruction->AlignRobust(src, dst, min_num_inliers,
+  //                                                ransac, &tform);
+  //     if (success) {
+  //       std::vector<double> verr;
+  //       verr.reserve(config_.NumImages());
+  //       Eigen::Vector3d position_centroid = Eigen::Vector3d::Zero();
+  //       for (const auto image_id : config_.Images()) {
+  //         const auto& image = reconstruction->Image(image_id);
 
-          position_centroid += image.ProjectionCenter();
+  //         position_centroid += image.ProjectionCenter();
           
-          if (image.HasTvecPrior()) {
-            verr.push_back(
-                (image.ProjectionCenter() - image.TvecPrior()).norm());
-          }
-        }
+  //         if (image.HasTvecPrior()) {
+  //           verr.push_back(
+  //               (image.ProjectionCenter() - image.TvecPrior()).norm());
+  //         }
+  //       }
 
-        position_centroid /= static_cast<double>(config_.Images().size());
+  //       position_centroid /= static_cast<double>(config_.Images().size());
 
-        sim_to_center = SimilarityTransform3(1.0, ComposeIdentityQuaternion(), -position_centroid);
-        reconstruction->Transform(sim_to_center);
+  //       sim_to_center = SimilarityTransform3(1.0, ComposeIdentityQuaternion(), -position_centroid);
+  //       reconstruction->Transform(sim_to_center);
 
-        Eigen::Vector3d tvec_centroid = Eigen::Vector3d::Zero();
-        Eigen::Vector3d prev_tvecprior_centroid = Eigen::Vector3d::Zero();
-        Eigen::Vector3d tvecprior_centroid = Eigen::Vector3d::Zero();
-        size_t nbprior = 0;
+  //       Eigen::Vector3d tvec_centroid = Eigen::Vector3d::Zero();
+  //       Eigen::Vector3d prev_tvecprior_centroid = Eigen::Vector3d::Zero();
+  //       Eigen::Vector3d tvecprior_centroid = Eigen::Vector3d::Zero();
+  //       size_t nbprior = 0;
 
-        for (const auto image_id : config_.Images()) {
-          auto& image = reconstruction->Image(image_id);
-          if (image.HasTvecPrior()) {
-            sim_to_center.TransformPoint(&image.TvecPrior());
-          }
-        }
+  //       for (const auto image_id : config_.Images()) {
+  //         auto& image = reconstruction->Image(image_id);
+  //         if (image.HasTvecPrior()) {
+  //           sim_to_center.TransformPoint(&image.TvecPrior());
+  //         }
+  //       }
 
 
-        std::cout << "\nRigid Sim3 Alignment : \n";
-        std::cout << "- scale : " << tform.Scale() << "\n";
-        std::cout << "- trans : " << tform.Translation().transpose() << "\n";
-        std::cout << "- rot : " << tform.Rotation().transpose() << "\n\n";
+  //       std::cout << "\nRigid Sim3 Alignment : \n";
+  //       std::cout << "- scale : " << tform.Scale() << "\n";
+  //       std::cout << "- trans : " << tform.Translation().transpose() << "\n";
+  //       std::cout << "- rot : " << tform.Rotation().transpose() << "\n\n";
 
-        std::cout << "\nSim3 Alignment tvec err (median / mean / std): "
-                  << Median(verr) << " / " << Mean(verr) << " / "
-                  << StdDev(verr) << "\n";
-      } else {
-        std::cout << "\nRobust Sim3 Alignment failed!\n";
-      }
-    }
-  }
+  //       std::cout << "\nSim3 Alignment tvec err (median / mean / std): "
+  //                 << Median(verr) << " / " << Mean(verr) << " / "
+  //                 << StdDev(verr) << "\n";
+  //     } else {
+  //       std::cout << "\nRobust Sim3 Alignment failed!\n";
+  //     }
+  //   }
+  // }
 
   ceres::LossFunction* loss_function = options_.CreateLossFunction();
   SetUp(reconstruction, loss_function);
@@ -344,10 +344,10 @@ bool BundleAdjuster::Solve(Reconstruction* reconstruction) {
   std::cout << "\nVisual Loss Function : " << int(options_.loss_function_type) << "\n";
   std::cout << "\nLoss Function scale : " << options_.loss_function_scale << "\n";
 
-  if (options_.use_prior_motion) {
-    std::cout << "\nPrior Loss Function : " << options_.use_robust_loss_on_prior << "\n";
-    std::cout << "\nPrior Loss Function scale : " << options_.prior_loss_scale << "\n";
-  }
+  // if (options_.use_prior_motion) {
+  //   std::cout << "\nPrior Loss Function : " << options_.use_robust_loss_on_prior << "\n";
+  //   std::cout << "\nPrior Loss Function scale : " << options_.prior_loss_scale << "\n";
+  // }
 
   if (problem_->NumResiduals() == 0) {
     return false;
@@ -399,32 +399,32 @@ bool BundleAdjuster::Solve(Reconstruction* reconstruction) {
     PrintSolverSummary(summary_);
   }
 
-  if (options_.use_prior_motion) {
-    if (problem_->HasParameterBlock(qwc0_.data())) {
-      const SimilarityTransform3& tform =
-          SimilarityTransform3(1.0, qwc0_, Eigen::Vector3d::Zero());
-      reconstruction->Transform(tform);
-    }
+  // if (options_.use_prior_motion) {
+  //   if (problem_->HasParameterBlock(qwc0_.data())) {
+  //     const SimilarityTransform3& tform =
+  //         SimilarityTransform3(1.0, qwc0_, Eigen::Vector3d::Zero());
+  //     reconstruction->Transform(tform);
+  //   }
 
-    std::cout << summary_.FullReport() << std::endl;
+  //   std::cout << summary_.FullReport() << std::endl;
 
-    sim_to_center = sim_to_center.Inverse();
-    reconstruction->Transform(sim_to_center);
+  //   sim_to_center = sim_to_center.Inverse();
+  //   reconstruction->Transform(sim_to_center);
 
-    std::vector<double> verr;
-    verr.reserve(config_.NumImages());
-    for (const auto image_id : config_.Images()) {
-      auto& image = reconstruction->Image(image_id);
-      if (image.HasTvecPrior()) {
-        sim_to_center.TransformPoint(&image.TvecPrior());
-        verr.push_back((image.ProjectionCenter() - image.TvecPrior()).norm());
-      }
-    }
+  //   std::vector<double> verr;
+  //   verr.reserve(config_.NumImages());
+  //   for (const auto image_id : config_.Images()) {
+  //     auto& image = reconstruction->Image(image_id);
+  //     if (image.HasTvecPrior()) {
+  //       sim_to_center.TransformPoint(&image.TvecPrior());
+  //       verr.push_back((image.ProjectionCenter() - image.TvecPrior()).norm());
+  //     }
+  //   }
 
-    std::cout << "\n GPS - SfM based BA tvec err (median / mean / std): "
-              << Median(verr) << " / " << Mean(verr) << " / " << StdDev(verr)
-              << "\n";
-  }
+  //   std::cout << "\n GPS - SfM based BA tvec err (median / mean / std): "
+  //             << Median(verr) << " / " << Mean(verr) << " / " << StdDev(verr)
+  //             << "\n";
+  // }
 
   TearDown(reconstruction);
 
@@ -541,31 +541,31 @@ void BundleAdjuster::AddImageToProblem(const image_t image_id,
     }
   }
 
-  if (options_.use_prior_motion && image.HasTvecPrior()) {
-    ceres::LossFunction* prior_loss = nullptr;
-    if (options_.use_robust_loss_on_prior) {
-      prior_loss = new ceres::HuberLoss(std::sqrt(options_.prior_loss_scale));
-    }
+  // if (options_.use_prior_motion && image.HasTvecPrior()) {
+  //   ceres::LossFunction* prior_loss = nullptr;
+  //   if (options_.use_robust_loss_on_prior) {
+  //     prior_loss = new ceres::HuberLoss(std::sqrt(options_.prior_loss_scale));
+  //   }
 
-    if (config_.NumConstantPoses() > 0 || config_.NumConstantTvecs() > 0 ||
-        config_.NumConstantPoints() > 0) {
-      if (!problem_->HasParameterBlock(qwc0_.data())) {
-        problem_->AddParameterBlock(qwc0_.data(), 4,
-                                    new ceres::QuaternionParameterization);
-      }
-      ceres::CostFunction* prior_pos_cost_func =
-          PositionAlignGloblaRotCostFunction::Create(
-              image.TvecPrior(), options_.motion_prior_xyz_std);
-      problem_->AddResidualBlock(prior_pos_cost_func, prior_loss, qwc0_.data(),
-                                 qvec_data, tvec_data);
-    } else {
-      ceres::CostFunction* prior_pos_cost_func =
-          PositionAlignCostFunction::Create(image.TvecPrior(),
-                                            options_.motion_prior_xyz_std);
-      problem_->AddResidualBlock(prior_pos_cost_func, prior_loss, qvec_data,
-                                 tvec_data);
-    }
-  }
+  //   if (config_.NumConstantPoses() > 0 || config_.NumConstantTvecs() > 0 ||
+  //       config_.NumConstantPoints() > 0) {
+  //     if (!problem_->HasParameterBlock(qwc0_.data())) {
+  //       problem_->AddParameterBlock(qwc0_.data(), 4,
+  //                                   new ceres::QuaternionParameterization);
+  //     }
+  //     ceres::CostFunction* prior_pos_cost_func =
+  //         PositionAlignGloblaRotCostFunction::Create(
+  //             image.TvecPrior(), options_.motion_prior_xyz_std);
+  //     problem_->AddResidualBlock(prior_pos_cost_func, prior_loss, qwc0_.data(),
+  //                                qvec_data, tvec_data);
+  //   } else {
+  //     ceres::CostFunction* prior_pos_cost_func =
+  //         PositionAlignCostFunction::Create(image.TvecPrior(),
+  //                                           options_.motion_prior_xyz_std);
+  //     problem_->AddResidualBlock(prior_pos_cost_func, prior_loss, qvec_data,
+  //                                tvec_data);
+  //   }
+  // }
 }
 
 void BundleAdjuster::AddPointToProblem(const point3D_t point3D_id,
@@ -1286,6 +1286,304 @@ void RigBundleAdjuster::ParameterizeCameraRigs(Reconstruction* reconstruction) {
     problem_->SetParameterization(qvec_data, quaternion_parameterization);
   }
 }
+
+
+////////////////////////////////////////////////////////////////////////////////
+// GpsBundleAdjuster
+////////////////////////////////////////////////////////////////////////////////
+
+GpsBundleAdjuster::GpsBundleAdjuster(const BundleAdjustmentOptions& options,
+                                     const BundleAdjustmentConfig& config)
+    : BundleAdjuster(options, config) 
+{}
+
+bool GpsBundleAdjuster::Solve(Reconstruction* reconstruction) {
+  CHECK_NOTNULL(reconstruction);
+  CHECK(!problem_) << "Cannot use the same BundleAdjuster multiple times";
+
+  problem_.reset(new ceres::Problem());
+
+  SimilarityTransform3 sim_to_center;
+
+  if (options_.use_prior_motion) {
+    std::vector<double> vini_err;
+    std::vector<Eigen::Vector3d> src, dst;
+    vini_err.reserve(config_.NumImages());
+    src.reserve(config_.NumImages());
+    dst.reserve(config_.NumImages());
+    for (const auto image_id : config_.Images()) {
+      auto& image = reconstruction->Image(image_id);
+      if (image.HasTvecPrior()) {
+        src.push_back(image.ProjectionCenter());
+        dst.push_back(image.TvecPrior());
+        vini_err.push_back(
+            (image.ProjectionCenter() - image.TvecPrior()).norm());
+      }
+    }
+
+    std::cout << "\n Initial Alignment tvec err (median / mean / std): "
+              << Median(vini_err) << " / " << Mean(vini_err) << " / "
+              << StdDev(vini_err) << "\n";
+
+    if (src.size() > 5) {
+      SimilarityTransform3 tform;
+      // bool success = reconstruction->Align(src, dst, &tform);
+      RANSACOptions ransac;
+      ransac.max_error = (options_.motion_prior_xyz_std * 3.).norm();
+      const int min_num_inliers = 3;
+      bool success = reconstruction->AlignRobust(src, dst, min_num_inliers,
+                                                 ransac, &tform);
+      if (success) {
+        std::vector<double> verr;
+        verr.reserve(config_.NumImages());
+        Eigen::Vector3d position_centroid = Eigen::Vector3d::Zero();
+        for (const auto image_id : config_.Images()) {
+          const auto& image = reconstruction->Image(image_id);
+
+          position_centroid += image.ProjectionCenter();
+          
+          if (image.HasTvecPrior()) {
+            verr.push_back(
+                (image.ProjectionCenter() - image.TvecPrior()).norm());
+          }
+        }
+
+        position_centroid /= static_cast<double>(config_.Images().size());
+
+        sim_to_center = SimilarityTransform3(1.0, ComposeIdentityQuaternion(), -position_centroid);
+        reconstruction->Transform(sim_to_center);
+
+        // Eigen::Vector3d tvec_centroid = Eigen::Vector3d::Zero();
+        // Eigen::Vector3d prev_tvecprior_centroid = Eigen::Vector3d::Zero();
+        // Eigen::Vector3d tvecprior_centroid = Eigen::Vector3d::Zero();
+        // size_t nbprior = 0;
+
+        for (const auto image_id : config_.Images()) {
+          auto& image = reconstruction->Image(image_id);
+          if (image.HasTvecPrior()) {
+            sim_to_center.TransformPoint(&image.TvecPrior());
+          }
+        }
+
+
+        std::cout << "\nRigid Sim3 Alignment : \n";
+        std::cout << "- scale : " << tform.Scale() << "\n";
+        std::cout << "- trans : " << tform.Translation().transpose() << "\n";
+        std::cout << "- rot : " << tform.Rotation().transpose() << "\n\n";
+
+        std::cout << "\nSim3 Alignment tvec err (median / mean / std): "
+                  << Median(verr) << " / " << Mean(verr) << " / "
+                  << StdDev(verr) << "\n";
+      } else {
+        std::cout << "\nRobust Sim3 Alignment failed!\n";
+      }
+    }
+  }
+
+  ceres::LossFunction* loss_function = options_.CreateLossFunction();
+  SetUp(reconstruction, loss_function);
+
+  std::cout << "\nVisual Loss Function : " << int(options_.loss_function_type) << "\n";
+  std::cout << "\nLoss Function scale : " << options_.loss_function_scale << "\n";
+
+  if (options_.use_prior_motion) {
+    std::cout << "\nPrior Loss Function : " << options_.use_robust_loss_on_prior << "\n";
+    std::cout << "\nPrior Loss Function scale : " << options_.prior_loss_scale << "\n";
+  }
+
+  if (problem_->NumResiduals() == 0) {
+    return false;
+  }
+
+  ceres::Solver::Options solver_options = options_.solver_options;
+  const bool has_sparse =
+      solver_options.sparse_linear_algebra_library_type != ceres::NO_SPARSE;
+
+  // Empirical choice.
+  const size_t kMaxNumImagesDirectDenseSolver = 50;
+  const size_t kMaxNumImagesDirectSparseSolver = 4000;
+  const size_t num_images = config_.NumImages();
+  if (num_images <= kMaxNumImagesDirectDenseSolver) {
+    solver_options.linear_solver_type = ceres::DENSE_SCHUR;
+  } else if (num_images <= kMaxNumImagesDirectSparseSolver && has_sparse) {
+    solver_options.linear_solver_type = ceres::SPARSE_SCHUR;
+  } else {  // Indirect sparse (preconditioned CG) solver.
+    solver_options.linear_solver_type = ceres::ITERATIVE_SCHUR;
+    solver_options.preconditioner_type = ceres::SCHUR_JACOBI;
+  }
+
+  if (problem_->NumResiduals() <
+      options_.min_num_residuals_for_multi_threading) {
+    solver_options.num_threads = 1;
+#if CERES_VERSION_MAJOR < 2
+    solver_options.num_linear_solver_threads = 1;
+#endif  // CERES_VERSION_MAJOR
+  } else {
+    solver_options.num_threads =
+        GetEffectiveNumThreads(solver_options.num_threads);
+#if CERES_VERSION_MAJOR < 2
+    solver_options.num_linear_solver_threads =
+        GetEffectiveNumThreads(solver_options.num_linear_solver_threads);
+#endif  // CERES_VERSION_MAJOR
+  }
+
+  std::string solver_error;
+  CHECK(solver_options.IsValid(&solver_error)) << solver_error;
+
+  ceres::Solve(solver_options, problem_.get(), &summary_);
+
+  if (solver_options.minimizer_progress_to_stdout) {
+    std::cout << std::endl;
+  }
+
+  if (options_.print_summary) {
+    PrintHeading2("Bundle adjustment report");
+    PrintSolverSummary(summary_);
+  }
+
+  if (options_.use_prior_motion) {
+    if (problem_->HasParameterBlock(qwc0_.data())) {
+      const SimilarityTransform3& tform =
+          SimilarityTransform3(1.0, qwc0_, Eigen::Vector3d::Zero());
+      reconstruction->Transform(tform);
+    }
+
+    std::cout << summary_.FullReport() << std::endl;
+
+    sim_to_center = sim_to_center.Inverse();
+    reconstruction->Transform(sim_to_center);
+
+    std::vector<double> verr;
+    verr.reserve(config_.NumImages());
+    for (const auto image_id : config_.Images()) {
+      auto& image = reconstruction->Image(image_id);
+      if (image.HasTvecPrior()) {
+        sim_to_center.TransformPoint(&image.TvecPrior());
+        verr.push_back((image.ProjectionCenter() - image.TvecPrior()).norm());
+      }
+    }
+
+    std::cout << "\n GPS - SfM based BA tvec err (median / mean / std): "
+              << Median(verr) << " / " << Mean(verr) << " / " << StdDev(verr)
+              << "\n";
+  }
+
+  TearDown(reconstruction);
+
+  return true;
+}
+
+void GpsBundleAdjuster::AddImageToProblem(const image_t image_id,
+                                       Reconstruction* reconstruction,
+                                       ceres::LossFunction* loss_function) {
+  Image& image = reconstruction->Image(image_id);
+  Camera& camera = reconstruction->Camera(image.CameraId());
+
+  // CostFunction assumes unit quaternions.
+  image.NormalizeQvec();
+
+  double* qvec_data = image.Qvec().data();
+  double* tvec_data = image.Tvec().data();
+  double* camera_params_data = camera.ParamsData();
+
+  const bool constant_pose =
+      !options_.refine_extrinsics || config_.HasConstantPose(image_id);
+
+  // Add residuals to bundle adjustment problem.
+  size_t num_observations = 0;
+  for (const Point2D& point2D : image.Points2D()) {
+    if (!point2D.HasPoint3D()) {
+      continue;
+    }
+
+    num_observations += 1;
+    point3D_num_observations_[point2D.Point3DId()] += 1;
+
+    Point3D& point3D = reconstruction->Point3D(point2D.Point3DId());
+    assert(point3D.Track().Length() > 1);
+
+    ceres::CostFunction* cost_function = nullptr;
+
+    if (constant_pose) {
+      switch (camera.ModelId()) {
+#define CAMERA_MODEL_CASE(CameraModel)                                 \
+  case CameraModel::kModelId:                                          \
+    cost_function =                                                    \
+        BundleAdjustmentConstantPoseCostFunction<CameraModel>::Create( \
+            image.Qvec(), image.Tvec(), point2D.XY());                 \
+    break;
+
+        CAMERA_MODEL_SWITCH_CASES
+
+#undef CAMERA_MODEL_CASE
+      }
+
+      problem_->AddResidualBlock(cost_function, loss_function,
+                                 point3D.XYZ().data(), camera_params_data);
+    } else {
+      switch (camera.ModelId()) {
+#define CAMERA_MODEL_CASE(CameraModel)                                   \
+  case CameraModel::kModelId:                                            \
+    cost_function =                                                      \
+        BundleAdjustmentCostFunction<CameraModel>::Create(point2D.XY()); \
+    break;
+
+        CAMERA_MODEL_SWITCH_CASES
+
+#undef CAMERA_MODEL_CASE
+      }
+
+      problem_->AddResidualBlock(cost_function, loss_function, qvec_data,
+                                 tvec_data, point3D.XYZ().data(),
+                                 camera_params_data);
+    }
+  }
+
+  if (num_observations > 0) {
+    camera_ids_.insert(image.CameraId());
+
+    // Set pose parameterization.
+    if (!constant_pose) {
+      ceres::LocalParameterization* quaternion_parameterization =
+          new ceres::QuaternionParameterization;
+      problem_->SetParameterization(qvec_data, quaternion_parameterization);
+      if (config_.HasConstantTvec(image_id)) {
+        const std::vector<int>& constant_tvec_idxs =
+            config_.ConstantTvec(image_id);
+        ceres::SubsetParameterization* tvec_parameterization =
+            new ceres::SubsetParameterization(3, constant_tvec_idxs);
+        problem_->SetParameterization(tvec_data, tvec_parameterization);
+      }
+    }
+  }
+
+  if (options_.use_prior_motion && image.HasTvecPrior()) {
+    ceres::LossFunction* prior_loss = nullptr;
+    if (options_.use_robust_loss_on_prior) {
+      prior_loss = new ceres::HuberLoss(std::sqrt(options_.prior_loss_scale));
+    }
+
+    if (config_.NumConstantPoses() > 0 || config_.NumConstantTvecs() > 0 ||
+        config_.NumConstantPoints() > 0) {
+      if (!problem_->HasParameterBlock(qwc0_.data())) {
+        problem_->AddParameterBlock(qwc0_.data(), 4,
+                                    new ceres::QuaternionParameterization);
+      }
+      ceres::CostFunction* prior_pos_cost_func =
+          PositionAlignGloblaRotCostFunction::Create(
+              image.TvecPrior(), options_.motion_prior_xyz_std);
+      problem_->AddResidualBlock(prior_pos_cost_func, prior_loss, qwc0_.data(),
+                                 qvec_data, tvec_data);
+    } else {
+      ceres::CostFunction* prior_pos_cost_func =
+          PositionAlignCostFunction::Create(image.TvecPrior(),
+                                            options_.motion_prior_xyz_std);
+      problem_->AddResidualBlock(prior_pos_cost_func, prior_loss, qvec_data,
+                                 tvec_data);
+    }
+  }
+}
+
 
 void PrintSolverSummary(const ceres::Solver::Summary& summary) {
   std::cout << std::right << std::setw(16) << "Residuals : ";

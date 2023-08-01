@@ -32,6 +32,7 @@
 #include "ui/bundle_adjustment_widget.h"
 
 #include "controllers/bundle_adjustment.h"
+#include "controllers/gps_align_bundle_adjustment.h"
 #include "ui/main_window.h"
 
 namespace colmap {
@@ -111,10 +112,6 @@ void BundleAdjustmentWidget::Run() {
 
   WriteOptions();
 
-  Thread* thread = new BundleAdjustmentController(*options_, reconstruction_);
-  thread->AddCallback(Thread::FINISHED_CALLBACK,
-                      [this]() { render_action_->trigger(); });
-
   size_t nb_motion_prior = 0;
   if (options_->bundle_adjustment->use_prior_motion) {
     for (const auto& image : reconstruction_->Images()) {
@@ -130,13 +127,32 @@ void BundleAdjustmentWidget::Run() {
     }
   }
 
-  if (!options_->bundle_adjustment->use_prior_motion) {
-    // Normalize scene for numerical stability and
-    // to avoid large scale changes in viewer.
-    reconstruction_->Normalize();
+
+  if (options_->bundle_adjustment->use_prior_motion) {
+    RunGpsBA();
+  } else {
+    RunBA();
   }
+}
+
+void BundleAdjustmentWidget::RunBA() {
+  Thread* thread = new BundleAdjustmentController(*options_, reconstruction_);
+  thread->AddCallback(Thread::FINISHED_CALLBACK,
+                      [this]() { render_action_->trigger(); });
+
+  // Normalize scene for numerical stability and
+  // to avoid large scale changes in viewer.
+  reconstruction_->Normalize();
 
   thread_control_widget_->StartThread("Bundle adjusting...", true, thread);
+}
+
+void BundleAdjustmentWidget::RunGpsBA() {
+  Thread* thread = new GPSAlignBundleAdjustmentController(*options_, reconstruction_);
+  thread->AddCallback(Thread::FINISHED_CALLBACK,
+                      [this]() { render_action_->trigger(); });
+
+  thread_control_widget_->StartThread("GPS Bundle adjusting...", true, thread);
 }
 
 void BundleAdjustmentWidget::Render() { main_window_->RenderNow(); }

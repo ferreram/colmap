@@ -103,8 +103,8 @@ void GPSAlignBundleAdjustmentController::Run() {
   std::cout << ">>> Num 3D Points : " << reconstruction_->NumPoints3D() << "\n\n";
 
   // Run bundle adjustment.
-  BundleAdjuster bundle_adjuster(ba_options, ba_config);
-  bundle_adjuster.Solve(reconstruction_);
+  GpsBundleAdjuster gps_bundle_adjuster(ba_options, ba_config);
+  gps_bundle_adjuster.Solve(reconstruction_);
 
   // Filter GPS-SfM Results.
   reconstruction_->FilterObservationsWithNegativeDepth();

@@ -185,18 +185,18 @@ class BundleAdjuster {
   const ceres::Solver::Summary& Summary() const;
 
  private:
+  void AddImageToProblem(const image_t image_id, Reconstruction* reconstruction,
+                         ceres::LossFunction* loss_function);
+
+ protected:
   void SetUp(Reconstruction* reconstruction,
              ceres::LossFunction* loss_function);
   void TearDown(Reconstruction* reconstruction);
-
-  void AddImageToProblem(const image_t image_id, Reconstruction* reconstruction,
-                         ceres::LossFunction* loss_function);
 
   void AddPointToProblem(const point3D_t point3D_id,
                          Reconstruction* reconstruction,
                          ceres::LossFunction* loss_function);
 
- protected:
   void ParameterizeCameras(Reconstruction* reconstruction);
   void ParameterizePoints(Reconstruction* reconstruction);
 
@@ -208,7 +208,8 @@ class BundleAdjuster {
   std::unordered_map<point3D_t, size_t> point3D_num_observations_;
 
   // Rotation from camera frame to world frame
-  // to be used with motion priors
+  // to be used with motion priors to allow GPS NED/ENU alignment
+  // through a common rotation even when some poses are set as const
   Eigen::Vector4d qwc0_ = Eigen::Vector4d(1.0, 0.0, 0.0, 0.0);
 };
 
@@ -336,8 +337,53 @@ class RigBundleAdjuster : public BundleAdjuster {
   std::unordered_set<double*> parameterized_qvec_data_;
 };
 
+
+// Bundle adjustment based on Ceres-Solver. Enables most flexible configurations
+// and provides best solution quality.
+class GpsBundleAdjuster : public BundleAdjuster {
+ public:
+  GpsBundleAdjuster(const BundleAdjustmentOptions& options,
+                    const BundleAdjustmentConfig& config);
+
+  bool Solve(Reconstruction* reconstruction);
+
+  // Get the Ceres solver summary for the last call to `Solve`.
+  const ceres::Solver::Summary& Summary() const;
+
+ private:
+  // void SetUp(Reconstruction* reconstruction,
+  //            ceres::LossFunction* loss_function);
+  // void TearDown(Reconstruction* reconstruction);
+
+  void AddImageToProblem(const image_t image_id, Reconstruction* reconstruction,
+                         ceres::LossFunction* loss_function);
+
+  // void AddPointToProblem(const point3D_t point3D_id,
+  //                        Reconstruction* reconstruction,
+  //                        ceres::LossFunction* loss_function);
+
+ protected:
+  // void ParameterizeCameras(Reconstruction* reconstruction);
+  // void ParameterizePoints(Reconstruction* reconstruction);
+
+  // const BundleAdjustmentOptions options_;
+  // BundleAdjustmentConfig config_;
+  // std::unique_ptr<ceres::Problem> problem_;
+  // ceres::Solver::Summary summary_;
+  // std::unordered_set<camera_t> camera_ids_;
+  // std::unordered_map<point3D_t, size_t> point3D_num_observations_;
+
+  // Rotation from camera frame to world frame
+  // to be used with motion priors to allow GPS NED/ENU alignment
+  // through a common rotation even when some poses are set as const
+  Eigen::Vector4d qwc0_ = Eigen::Vector4d(1.0, 0.0, 0.0, 0.0);
+};
+
 void PrintSolverSummary(const ceres::Solver::Summary& summary);
 
 }  // namespace colmap
+
+
+
 
 #endif  // COLMAP_SRC_OPTIM_BUNDLE_ADJUSTMENT_H_
