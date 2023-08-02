@@ -215,6 +215,10 @@ TEST(Camera, IsUndistorted) {
   EXPECT_TRUE(camera.IsUndistorted());
   camera.SetParams({1.0, 1.0, 0.5, 0.5, 0.0, 0.0, 0.0, 0.001});
   EXPECT_FALSE(camera.IsUndistorted());
+  camera.InitializeWithId(OpenCVRadTan5CameraModel::model_id, 1.0, 1, 1);
+  EXPECT_TRUE(camera.IsUndistorted());
+  camera.SetParams({1.0, 1.0, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.001});
+  EXPECT_FALSE(camera.IsUndistorted());
   camera.InitializeWithId(FullOpenCVCameraModel::model_id, 1.0, 1, 1);
   EXPECT_TRUE(camera.IsUndistorted());
   camera.SetParams(

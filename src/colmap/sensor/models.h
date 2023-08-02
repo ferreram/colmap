@@ -121,6 +121,7 @@ static const int kInvalidCameraModelId = -1;
   CAMERA_MODEL_CASE(RadialFisheyeCameraModel)       \
   CAMERA_MODEL_CASE(OpenCVCameraModel)              \
   CAMERA_MODEL_CASE(OpenCVFisheyeCameraModel)       \
+  CAMERA_MODEL_CASE(OpenCVRadTan5CameraModel)       \
   CAMERA_MODEL_CASE(FullOpenCVCameraModel)          \
   CAMERA_MODEL_CASE(FOVCameraModel)                 \
   CAMERA_MODEL_CASE(ThinPrismFisheyeCameraModel)
@@ -261,6 +262,23 @@ struct OpenCVCameraModel : public BaseCameraModel<OpenCVCameraModel> {
 struct OpenCVFisheyeCameraModel
     : public BaseCameraModel<OpenCVFisheyeCameraModel> {
   CAMERA_MODEL_DEFINITIONS(5, "OPENCV_FISHEYE", 8)
+};
+
+// OpenCV RadTan5 camera model.
+//
+// Based on the pinhole camera model. Additionally models radial and
+// tangential distortion (up to 3rd degree of coefficients for radial dist). Not
+// suitable for large radial distortions of fish-eye cameras.
+//
+// Parameter list is expected in the following order:
+//
+//    fx, fy, cx, cy, k1, k2, k3, p1, p2
+//
+// See
+// http://docs.opencv.org/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+struct OpenCVRadTan5CameraModel
+    : public BaseCameraModel<OpenCVRadTan5CameraModel> {
+  CAMERA_MODEL_DEFINITIONS(11, "OPENCV_RADTAN5", 9)
 };
 
 // Full OpenCV camera model.
@@ -994,6 +1012,95 @@ void OpenCVFisheyeCameraModel::Distortion(
     *du = T(0);
     *dv = T(0);
   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// OpenCVRadTan5CameraModel
+
+std::string OpenCVRadTan5CameraModel::InitializeParamsInfo() {
+  return "fx, fy, cx, cy, k1, k2, k3, p1, p2";
+}
+
+std::vector<size_t> OpenCVRadTan5CameraModel::InitializeFocalLengthIdxs() {
+  return {0, 1};
+}
+
+std::vector<size_t> OpenCVRadTan5CameraModel::InitializePrincipalPointIdxs() {
+  return {2, 3};
+}
+
+std::vector<size_t> OpenCVRadTan5CameraModel::InitializeExtraParamsIdxs() {
+  return {4, 5, 6, 7, 8};
+}
+
+std::vector<double> OpenCVRadTan5CameraModel::InitializeParams(
+    const double focal_length, const size_t width, const size_t height) {
+  return {focal_length,
+          focal_length,
+          width / 2.0,
+          height / 2.0,
+          0.,
+          0.,
+          0.,
+          0.,
+          0.};
+}
+
+template <typename T>
+void OpenCVRadTan5CameraModel::ImgFromCam(
+    const T* params, T u, T v, T w, T* x, T* y) {
+  const T f1 = params[0];
+  const T f2 = params[1];
+  const T c1 = params[2];
+  const T c2 = params[3];
+
+  u /= w;
+  v /= w;
+
+  // Distortion
+  T du, dv;
+  Distortion(&params[4], u, v, &du, &dv);
+  *x = u + du;
+  *y = v + dv;
+
+  // Transform to image coordinates
+  *x = f1 * *x + c1;
+  *y = f2 * *y + c2;
+}
+
+template <typename T>
+void OpenCVRadTan5CameraModel::CamFromImg(
+    const T* params, const T x, const T y, T* u, T* v, T* w) {
+  const T f1 = params[0];
+  const T f2 = params[1];
+  const T c1 = params[2];
+  const T c2 = params[3];
+
+  // Lift points to normalized plane
+  *u = (x - c1) / f1;
+  *v = (y - c2) / f2;
+  *w = 1;
+
+  IterativeUndistortion(&params[4], u, v);
+}
+
+template <typename T>
+void OpenCVRadTan5CameraModel::Distortion(
+    const T* extra_params, const T u, const T v, T* du, T* dv) {
+  const T k1 = extra_params[0];
+  const T k2 = extra_params[1];
+  const T k3 = extra_params[2];
+  const T p1 = extra_params[3];
+  const T p2 = extra_params[4];
+
+  const T u2 = u * u;
+  const T uv = u * v;
+  const T v2 = v * v;
+  const T r2 = u2 + v2;
+  const T r4 = r2 * r2;
+  const T radial = k1 * r2 + k2 * r4 + k3 * r4 * r2;
+  *du = u * radial + T(2) * p1 * uv + p2 * (r2 + T(2) * u2);
+  *dv = v * radial + T(2) * p2 * uv + p1 * (r2 + T(2) * v2);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

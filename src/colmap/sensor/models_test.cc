@@ -167,6 +167,11 @@ TEST(OpenCVFisheye, Nominal) {
       {651.123, 655.123, 386.123, 511.123, -0.471, 0.223, -0.001, 0.001});
 }
 
+TEST(OpenCVRadTan5, Nominal) {
+  TestModel<OpenCVRadTan5CameraModel>(
+      {651.123, 655.123, 386.123, 511.123, -0.471, 0.223, 0.02, -0.001, 0.001});
+}
+
 TEST(FullOpenCV, Nominal) {
   TestModel<FullOpenCVCameraModel>({651.123,
                                     655.123,
