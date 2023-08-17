@@ -46,6 +46,8 @@ class GPSAlignBundleAdjustmentController : public Thread {
 
  private:
   void Run();
+  bool LoadDatabase();
+  bool SetUpPriorMotions();
 
   const OptionManager options_;
   Reconstruction* reconstruction_;

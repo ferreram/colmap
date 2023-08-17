@@ -723,12 +723,23 @@ bool IncrementalMapper::AdjustGlobalBundle(
     // to avoid large scale changes in viewer.
     reconstruction_->Normalize();
   }
-  else // GpsBA case
+  else if (options.use_prior_motion) // GpsBA case
   {
-    // Run GPS bundle adjustment.
-    GpsBundleAdjuster bundle_adjuster(ba_options, ba_config);
-    if (!bundle_adjuster.Solve(reconstruction_)) {
-      return false;
+    if (options.use_z_prior_only)
+    {
+      // Run GPS bundle adjustment.
+      DepthBundleAdjuster bundle_adjuster(ba_options, ba_config);
+      if (!bundle_adjuster.Solve(reconstruction_)) {
+        return false;
+      }
+    }
+    else 
+    {
+      // Run GPS bundle adjustment.
+      GpsBundleAdjuster bundle_adjuster(ba_options, ba_config);
+      if (!bundle_adjuster.Solve(reconstruction_)) {
+        return false;
+      }
     }
   }
 

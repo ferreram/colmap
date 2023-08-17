@@ -127,6 +127,7 @@ struct IncrementalMapperOptions {
   bool ba_use_prior_motion = false;
   bool ba_prior_is_gps = false;
   bool ba_use_enu_coords = false;
+  bool ba_use_z_prior_only = false;
   double ba_prior_std_x = 1.0;
   double ba_prior_std_y = 1.0;
   double ba_prior_std_z = 1.0;

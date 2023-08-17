@@ -271,7 +271,7 @@ class RelativePoseCostFunction {
 // frame).
 class PositionAlignCostFunction {
  public:
-  explicit PositionAlignCostFunction(
+  PositionAlignCostFunction(
       const Eigen::Vector3d& pos_xyz,
       const Eigen::Vector3d& std_xyz = Eigen::Vector3d::Ones())
       : pos_x_(pos_xyz(0)),
@@ -321,7 +321,7 @@ class PositionAlignCostFunction {
 // (position meas. expected to be in world frame).
 class PositionAlignGloblaRotCostFunction {
  public:
-  explicit PositionAlignGloblaRotCostFunction(
+  PositionAlignGloblaRotCostFunction(
       const Eigen::Vector3d& pos_xyz,
       const Eigen::Vector3d& std_xyz = Eigen::Vector3d::Ones())
       : pos_x_(pos_xyz(0)),
@@ -370,6 +370,91 @@ class PositionAlignGloblaRotCostFunction {
   const double inv_std_y_;
   const double inv_std_z_;
 };
+
+
+// Depth alignment cost function (depth meas. expected to be in world
+// frame).
+class DepthAlignCostFunction {
+ public:
+  DepthAlignCostFunction(
+      const double pos_z,
+      const double std_z = 1.)
+      : pos_z_(pos_z),
+        inv_std_z_(1. / std_z) 
+    {}
+
+  static ceres::CostFunction* Create(
+      const double pos_z,
+      const double std_z = 1.) {
+    return (new ceres::AutoDiffCostFunction<DepthAlignCostFunction, 1, 4, 3>(
+        new DepthAlignCostFunction(pos_z, std_z)));
+  }
+
+  template <typename T>
+  bool operator()(const T* const qvec, const T* const tvec,
+                  T* residuals) const {
+    // Get Pose in world frame (cam -> world transform)
+    Eigen::Matrix<T, 3, 3, Eigen::RowMajor> Rciw;
+    ceres::QuaternionToRotation(qvec, Rciw.data());
+
+    const Eigen::Matrix<T, 3, 1> tciw(tvec[0], tvec[1], tvec[2]);
+
+    const Eigen::Matrix<T, 3, 1> twci = T(-1.) * (Rciw.transpose() * tciw);
+
+    // Weighted Position error.
+    residuals[0] = T(inv_std_z_) * (twci[2] - T(pos_z_));
+
+    return true;
+  }
+
+ private:
+  const double pos_z_;
+  const double inv_std_z_;
+};
+
+
+// Depth alignment cost function (depth meas. expected to be in world
+// frame).
+class DepthAlignGlobalRotCostFunction {
+ public:
+  explicit DepthAlignGlobalRotCostFunction(
+      const double pos_z,
+      const double std_z = 1.)
+      : pos_z_(pos_z),
+        inv_std_z_(1. / std_z) {}
+
+  static ceres::CostFunction* Create(
+      const double pos_z,
+      const double std_z = 1.) {
+    return (new ceres::AutoDiffCostFunction<DepthAlignGlobalRotCostFunction, 1, 4, 4, 3>(
+        new DepthAlignGlobalRotCostFunction(pos_z, std_z)));
+  }
+
+  template <typename T>
+  bool operator()(const T* const qwc0, const T* const qvec, const T* const tvec,
+                  T* residuals) const {
+    // Get Pose in world frame (cam -> world transform)
+    Eigen::Matrix<T, 3, 3, Eigen::RowMajor> Rcic0;
+    ceres::QuaternionToRotation(qvec, Rcic0.data());
+
+    const Eigen::Matrix<T, 3, 1> tcic0(tvec[0], tvec[1], tvec[2]);
+
+    Eigen::Matrix<T, 3, 3, Eigen::RowMajor> Rwc0;
+    ceres::QuaternionToRotation(qwc0, Rwc0.data());
+
+    const Eigen::Matrix<T, 3, 1> twci = T(-1.) * Rwc0 * Rcic0.transpose() * tcic0;
+
+    // Weighted Position error.
+    residuals[0] = T(inv_std_z_) * (twci[2] - T(pos_z_));
+
+    return true;
+  }
+
+ private:
+  const double pos_z_;
+  const double inv_std_z_;
+};
+
 
 }  // namespace colmap
 

@@ -72,7 +72,14 @@ GPSAlignBundleAdjustmentController::GPSAlignBundleAdjustmentController(
 void GPSAlignBundleAdjustmentController::Run() {
   CHECK_NOTNULL(reconstruction_);
 
-  PrintHeading1("Global bundle adjustment with GPS Alignment");
+  if (options_.bundle_adjustment->use_z_prior_only)
+  {
+    PrintHeading1("Global bundle adjustment with Depth Alignment");
+  }
+  else
+  {
+    PrintHeading1("Global bundle adjustment with GPS Alignment");
+  }
 
   const std::vector<image_t>& reg_image_ids = reconstruction_->RegImageIds();
 
@@ -103,8 +110,16 @@ void GPSAlignBundleAdjustmentController::Run() {
   std::cout << ">>> Num 3D Points : " << reconstruction_->NumPoints3D() << "\n\n";
 
   // Run bundle adjustment.
-  GpsBundleAdjuster gps_bundle_adjuster(ba_options, ba_config);
-  gps_bundle_adjuster.Solve(reconstruction_);
+  if (options_.bundle_adjustment->use_z_prior_only)
+  {
+    DepthBundleAdjuster depth_bundle_adjuster(ba_options, ba_config);
+    depth_bundle_adjuster.Solve(reconstruction_);
+  }
+  else
+  {
+    GpsBundleAdjuster gps_bundle_adjuster(ba_options, ba_config);
+    gps_bundle_adjuster.Solve(reconstruction_);
+  }
 
   // Filter GPS-SfM Results.
   reconstruction_->FilterObservationsWithNegativeDepth();

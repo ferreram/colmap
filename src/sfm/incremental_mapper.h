@@ -126,6 +126,9 @@ class IncrementalMapper {
     // If prior motion use is set
     bool use_prior_motion = false;
 
+    // If only use z coef of prior motion
+    bool use_z_prior_only = false;
+
     // Number of threads.
     int num_threads = -1;
 

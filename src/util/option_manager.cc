@@ -549,6 +549,8 @@ void OptionManager::AddMapperOptions() {
                               &mapper->ba_prior_is_gps);
   AddAndRegisterDefaultOption("Mapper.use_enu_coords",
                               &mapper->ba_use_enu_coords);
+  AddAndRegisterDefaultOption("Mapper.use_z_prior_only",
+                              &mapper->ba_use_z_prior_only);
   AddAndRegisterDefaultOption("Mapper.ba_prior_std_x",
                               &mapper->ba_prior_std_x);
   AddAndRegisterDefaultOption("Mapper.ba_prior_std_y",

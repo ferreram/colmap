@@ -71,9 +71,10 @@ struct BundleAdjustmentOptions {
 
   // Whether to use prior positions
   bool use_prior_motion = false;
+  bool use_z_prior_only = false;
   Eigen::Vector3d motion_prior_xyz_std = Eigen::Vector3d::Ones();
   bool use_robust_loss_on_prior = false;
-  double prior_loss_scale = 7.815;
+  double prior_loss_scale = 7.815; // chi2 at 99% = 11.345, 95% = 7.815, 90% = 6.2514
 
   // Minimum number of residuals to enable multi-threading. Note that
   // single-threaded is typically better for small bundle adjustment problems
@@ -179,23 +180,24 @@ class BundleAdjuster {
   BundleAdjuster(const BundleAdjustmentOptions& options,
                  const BundleAdjustmentConfig& config);
 
-  bool Solve(Reconstruction* reconstruction);
+  virtual ~BundleAdjuster() = default;
+
+  virtual bool Solve(Reconstruction* reconstruction);
 
   // Get the Ceres solver summary for the last call to `Solve`.
   const ceres::Solver::Summary& Summary() const;
-
- private:
-  void AddImageToProblem(const image_t image_id, Reconstruction* reconstruction,
-                         ceres::LossFunction* loss_function);
 
  protected:
   void SetUp(Reconstruction* reconstruction,
              ceres::LossFunction* loss_function);
   void TearDown(Reconstruction* reconstruction);
 
-  void AddPointToProblem(const point3D_t point3D_id,
-                         Reconstruction* reconstruction,
-                         ceres::LossFunction* loss_function);
+  virtual void AddImageToProblem(const image_t image_id, Reconstruction* reconstruction,
+                                 ceres::LossFunction* loss_function);
+
+  virtual void AddPointToProblem(const point3D_t point3D_id,
+                                 Reconstruction* reconstruction,
+                                 ceres::LossFunction* loss_function);
 
   void ParameterizeCameras(Reconstruction* reconstruction);
   void ParameterizePoints(Reconstruction* reconstruction);
@@ -345,38 +347,35 @@ class GpsBundleAdjuster : public BundleAdjuster {
   GpsBundleAdjuster(const BundleAdjustmentOptions& options,
                     const BundleAdjustmentConfig& config);
 
-  bool Solve(Reconstruction* reconstruction);
+  ~GpsBundleAdjuster() = default;
 
-  // Get the Ceres solver summary for the last call to `Solve`.
-  const ceres::Solver::Summary& Summary() const;
+  bool Solve(Reconstruction* reconstruction) override;
 
  private:
-  // void SetUp(Reconstruction* reconstruction,
-  //            ceres::LossFunction* loss_function);
-  // void TearDown(Reconstruction* reconstruction);
-
   void AddImageToProblem(const image_t image_id, Reconstruction* reconstruction,
-                         ceres::LossFunction* loss_function);
-
-  // void AddPointToProblem(const point3D_t point3D_id,
-  //                        Reconstruction* reconstruction,
-  //                        ceres::LossFunction* loss_function);
-
- protected:
-  // void ParameterizeCameras(Reconstruction* reconstruction);
-  // void ParameterizePoints(Reconstruction* reconstruction);
-
-  // const BundleAdjustmentOptions options_;
-  // BundleAdjustmentConfig config_;
-  // std::unique_ptr<ceres::Problem> problem_;
-  // ceres::Solver::Summary summary_;
-  // std::unordered_set<camera_t> camera_ids_;
-  // std::unordered_map<point3D_t, size_t> point3D_num_observations_;
+                         ceres::LossFunction* loss_function) override;
 
   // Rotation from camera frame to world frame
   // to be used with motion priors to allow GPS NED/ENU alignment
   // through a common rotation even when some poses are set as const
   Eigen::Vector4d qwc0_ = Eigen::Vector4d(1.0, 0.0, 0.0, 0.0);
+};
+
+
+// Bundle adjustment based on Ceres-Solver. Enables most flexible configurations
+// and provides best solution quality.
+class DepthBundleAdjuster : public BundleAdjuster {
+ public:
+  DepthBundleAdjuster(const BundleAdjustmentOptions& options,
+                      const BundleAdjustmentConfig& config);
+
+  ~DepthBundleAdjuster() = default;
+
+  bool Solve(Reconstruction* reconstruction) override;
+
+ private:
+  void AddImageToProblem(const image_t image_id, Reconstruction* reconstruction,
+                         ceres::LossFunction* loss_function) override;
 };
 
 void PrintSolverSummary(const ceres::Solver::Summary& summary);

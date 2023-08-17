@@ -126,6 +126,8 @@ MapperBundleAdjustmentOptionsWidget::MapperBundleAdjustmentOptionsWidget(
                 "is_gps (will convert priors to ecef coords.)");
   AddOptionBool(&options->mapper->ba_use_enu_coords,
                 "use_enu_coords (instead of ecef coords.)");
+  AddOptionBool(&options->mapper->ba_use_z_prior_only,
+                "use_z_prior_only (instead of ecef coords.)");
   AddOptionDouble(&options->mapper->ba_prior_std_x, "Prior - std_x", 0.0, 1e9,
                   1e-2, 3);
   AddOptionDouble(&options->mapper->ba_prior_std_y, "Prior - std_y", 0.0, 1e9,

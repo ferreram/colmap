@@ -206,6 +206,7 @@ IncrementalMapper::Options IncrementalMapperOptions::Mapper() const {
   options.local_ba_num_images = ba_local_num_images;
   options.fix_existing_images = fix_existing_images;
   options.use_prior_motion = ba_use_prior_motion;
+  options.use_z_prior_only = ba_use_z_prior_only;
   return options;
 }
 
@@ -241,6 +242,7 @@ BundleAdjustmentOptions IncrementalMapperOptions::LocalBundleAdjustment()
   options.loss_function_type =
       BundleAdjustmentOptions::LossFunctionType::SOFT_L1;
   options.use_prior_motion = false;
+  options.use_z_prior_only = false;
   // options.motion_prior_xyz_std =
   //     Eigen::Vector3d(ba_prior_std_x, ba_prior_std_y, ba_prior_std_z);
   return options;
@@ -269,6 +271,7 @@ BundleAdjustmentOptions IncrementalMapperOptions::GlobalBundleAdjustment()
       BundleAdjustmentOptions::LossFunctionType::TRIVIAL;
   if (ba_use_prior_motion) {
     options.use_prior_motion = ba_use_prior_motion;
+    options.use_z_prior_only = ba_use_z_prior_only;
     options.motion_prior_xyz_std =
         Eigen::Vector3d(ba_prior_std_x, ba_prior_std_y, ba_prior_std_z);
     if (ba_global_use_robust_loss_on_prior) {
@@ -344,6 +347,7 @@ void IncrementalMapperController::Run() {
   if (options_->ba_use_prior_motion) {
     std::cout << "\nSETTING UP PRIOR MOTION!";
     if (!SetUpPriorMotions()) {
+      std::cout << "\nSETTING UP PRIOR MOTION FAILED!";
       return;
     }
   }
@@ -445,15 +449,30 @@ bool IncrementalMapperController::SetUpPriorMotions() {
       database_cache_.Image(image_id).SetTvecPrior(vtvec_priors[k]);
       k++;
     }
-  } else {
+  } else if (options_->ba_prior_is_gps) {
     for (auto& image : database_cache_.Images()) {
       if (image.second.HasTvecPrior()) {
-        if (options_->ba_prior_is_gps) {
-          // GPS to ECEF conversion
-          database_cache_.Image(image.first)
-              .SetTvecPrior(
-                  gps_transform.EllToXYZ({image.second.TvecPrior()})[0]);
+        // GPS to ECEF conversion
+        database_cache_.Image(image.first)
+            .SetTvecPrior(
+                gps_transform.EllToXYZ({image.second.TvecPrior()})[0]);
+
+        ++nb_motion_prior;
+      }
+    }
+  } else if (options_->ba_use_z_prior_only) {
+    bool ini_depth_set = false;
+    Eigen::Vector3d ini_depth_prior = Eigen::Vector3d::Zero();
+    for (auto& image : database_cache_.Images()) {
+      if (image.second.HasTvecPrior()) {
+        // Relative depth w.r.t. to 1st image with depth value
+        if (!ini_depth_set) {
+          ini_depth_prior = image.second.TvecPrior();
+          ini_depth_set = true;
         }
+        database_cache_.Image(image.first)
+            .SetTvecPrior(image.second.TvecPrior() - ini_depth_prior);
+
         ++nb_motion_prior;
       }
     }
@@ -470,6 +489,22 @@ bool IncrementalMapperController::SetUpPriorMotions() {
       return false;
     }
   }
+
+  for (size_t idx=0; idx < reconstruction_manager_->Size(); ++idx)
+  {
+    auto& rec = reconstruction_manager_->Get(idx);
+    for (auto& img : rec.Images())
+    {
+      if (database_cache_.ExistsImage(img.first))
+      {
+        rec.Image(img.first).SetTvecPrior(database_cache_.Image(img.first).TvecPrior());
+      }
+    }
+  }
+
+  std::cout << StringPrintf(
+          "%d motion priors for %d images!",
+          nb_motion_prior, database_cache_.NumImages());
 
   return true;
 }

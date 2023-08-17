@@ -76,6 +76,8 @@ BundleAdjustmentWidget::BundleAdjustmentWidget(MainWindow* main_window,
   AddSection("Prior Motion parameters");
   AddOptionBool(&options->bundle_adjustment->use_prior_motion,
                 "use_prior_motion");
+  AddOptionBool(&options->bundle_adjustment->use_z_prior_only,
+                "use_z_prior_only");
   AddOptionDouble(&options->bundle_adjustment->motion_prior_xyz_std(0),
                   "Prior - std_x", 0.0, 1e9, 1e-2, 3);
   AddOptionDouble(&options->bundle_adjustment->motion_prior_xyz_std(1),
@@ -152,7 +154,10 @@ void BundleAdjustmentWidget::RunGpsBA() {
   thread->AddCallback(Thread::FINISHED_CALLBACK,
                       [this]() { render_action_->trigger(); });
 
-  thread_control_widget_->StartThread("GPS Bundle adjusting...", true, thread);
+  thread_control_widget_->StartThread(options_->mapper->ba_use_z_prior_only ? 
+                                          "Depth Bundle adjusting..." : "GPS Bundle Adjusting..."
+                                      , true
+                                      , thread);
 }
 
 void BundleAdjustmentWidget::Render() { main_window_->RenderNow(); }
